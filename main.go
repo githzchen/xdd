@@ -13,6 +13,7 @@ import (
 	"github.com/beego/beego/v2/server/web"
 	"github.com/cdle/jd_study/xdd/controllers"
 	"github.com/cdle/jd_study/xdd/models"
+	"github.com/cdle/jd_study/xdd/qbot"
 )
 
 var theme = ""
@@ -27,7 +28,7 @@ func main() {
 	})
 	web.Get("/", func(ctx *context.Context) {
 		if models.Config.Theme == "" {
-			models.Config.Theme = "https://ghproxy.com/https://raw.githubusercontent.com/cdle/jd_study/main/xdd/theme/bidong.html"
+			models.Config.Theme = "https://ghproxy.com/https://raw.githubusercontent.com/cdle/jd_study/main/xdd/theme/noodin.html"
 		}
 		if theme != "" {
 			ctx.WriteString(theme)
@@ -71,5 +72,8 @@ func main() {
 		time.Sleep(time.Second * 4)
 		(&models.JdCookie{}).Push("小滴滴已启动")
 	}()
+	if models.Config.QQID != 0 || models.Config.QQGroupID != 0 {
+		go qbot.Main()
+	}
 	web.Run()
 }

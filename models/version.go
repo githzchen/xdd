@@ -10,7 +10,7 @@ import (
 	"github.com/beego/beego/v2/core/logs"
 )
 
-var version = "2021080602"
+var version = "2021080902"
 
 func initVersion() {
 	logs.Info("检查更新" + version)
@@ -18,7 +18,7 @@ func initVersion() {
 	if err != nil {
 		logs.Info("更新User-Agent失败")
 	} else {
-		name := "jdc_" + runtime.GOOS + "_" + runtime.GOARCH
+		name := "xdd_" + runtime.GOOS + "_" + runtime.GOARCH
 		if match := regexp.MustCompile(`var version = "(\d{10})"`).FindStringSubmatch(value); len(match) != 0 {
 			if match[1] > version {
 				logs.Warn("版本过低，下载更新")
