@@ -119,6 +119,7 @@ func (c *LoginController) GetQrcode() {
 	data, _ = qrcode.Encode(url, qrcode.Medium, 256)
 	tgid := c.GetQueryInt("tgid")
 	qqid := c.GetQueryInt("qqid")
+	qqgid := c.GetQueryInt("qqgid")
 	id := 0
 	bot := ""
 	if tgid != 0 {
@@ -128,6 +129,10 @@ func (c *LoginController) GetQrcode() {
 	if qqid != 0 {
 		bot = "qq"
 		id = qqid
+	}
+	if qqgid != 0 {
+		bot = "qqg"
+		id = qqgid
 	}
 	JdCookieRunners.Store(st.Token, []interface{}{cookie, okl_token, bot, id})
 	if bot != "" {
@@ -154,22 +159,27 @@ func init() {
 					bot := vv[2].(string)
 					id := vv[3].(int)
 					// fmt.Println(jd_token, cookie, okl_token)
-					result := CheckLogin(jd_token, cookie, okl_token)
+					result, ck := CheckLogin(jd_token, cookie, okl_token)
 					// fmt.Println(result)
 					switch result {
 					case "成功":
 						if bot == "qq" {
-							models.NotifyQQ(int64(id), "扫码成功")
+							models.SendQQ(int64(id), "扫码成功")
+							ck.Updates(models.QQ, id)
 						} else if bot == "tg" {
 							models.SendTgMsg(int(id), "扫码成功")
+						} else if bot == "qqg" {
+							models.SendQQGroup(int64(id), "扫码成功")
 						}
 					case "授权登录未确认":
 					case "":
 					default: //失效
 						if bot == "qq" {
-							models.NotifyQQ(int64(id), "扫码失败")
+							models.SendQQ(int64(id), "扫码失败")
 						} else if bot == "tg" {
 							models.SendTgMsg(int(id), "扫码失败")
+						} else if bot == "qqg" {
+							models.SendQQGroup(int64(id), "扫码失败")
 						}
 					}
 				}
@@ -212,7 +222,7 @@ func (c *LoginController) Query() {
 	}
 }
 
-func CheckLogin(token, cookie, okl_token string) string {
+func CheckLogin(token, cookie, okl_token string) (string, *models.JdCookie) {
 	state := time.Now().Unix()
 	req := httplib.Post(
 		fmt.Sprintf(`https://plogin.m.jd.com/cgi-bin/m/tmauthchecktoken?&token=%s&ou_state=0&okl_token=%s`,
@@ -237,13 +247,13 @@ func CheckLogin(token, cookie, okl_token string) string {
 
 	rsp, err := req.Response()
 	if err != nil {
-		return "" //err.Error()
+		return "", nil //err.Error()
 	}
 	data, err := ioutil.ReadAll(rsp.Body)
 	sth := StepThree{}
 	err = json.Unmarshal(data, &sth)
 	if err != nil {
-		return "" //err.Error()
+		return "", nil //err.Error()
 	}
 	// fmt.Println(sth)
 	switch sth.Errcode {
@@ -253,45 +263,43 @@ func CheckLogin(token, cookie, okl_token string) string {
 		pt_pin := FetchJdCookieValue("pt_pin", cookies)
 		if pt_pin == "" {
 			JdCookieRunners.Delete(token)
-			return sth.Message
+			return sth.Message, nil
+		}
+		ck := models.JdCookie{
+			PtKey: pt_key,
+			PtPin: pt_pin,
+		}
+		if nck := models.GetJdCookie(ck.PtPin); nck != nil {
+			ck.ToPool(ck.PtKey)
+			msg := fmt.Sprintf("更新账号，%s", ck.PtPin)
+			(&models.JdCookie{}).Push(msg)
+			logs.Info(msg)
+		} else {
+			models.NewJdCookie(ck)
+			msg := fmt.Sprintf("添加账号，%s", ck.PtPin)
+			(&models.JdCookie{}).Push(msg)
+			logs.Info(msg)
 		}
 		go func() {
-			ck := models.JdCookie{
-				PtKey: pt_key,
-				PtPin: pt_pin,
-			}
-			if nck := models.GetJdCookie(ck.PtPin); nck != nil {
-				ck.ToPool(ck.PtKey)
-				msg := fmt.Sprintf("更新账号，%s", ck.PtPin)
-				(&models.JdCookie{}).Push(msg)
-				logs.Info(msg)
-			} else {
-				models.NewJdCookie(ck)
-				msg := fmt.Sprintf("添加账号，%s", ck.PtPin)
-				(&models.JdCookie{}).Push(msg)
-				logs.Info(msg)
-			}
-			go func() {
-				models.Save <- &ck
-			}()
+			models.Save <- &ck
 		}()
 		JdCookieRunners.Store(token, []interface{}{pt_pin})
-		return "成功"
+		return "成功", &ck
 	case 19: //Token无效，请退出重试
 		JdCookieRunners.Delete(token)
-		return sth.Message
+		return sth.Message, nil
 	case 21: //Token不存在，请退出重试
 		JdCookieRunners.Delete(token)
-		return sth.Message
+		return sth.Message, nil
 	case 176: //授权登录未确认
-		return sth.Message
+		return sth.Message, nil
 	case 258: //务异常，请稍后重试
-		return ""
+		return "", nil
 	default:
 		JdCookieRunners.Delete(token)
 		fmt.Println(sth)
 	}
-	return ""
+	return "", nil
 }
 
 func FetchJdCookieValue(key string, cookies string) string {
