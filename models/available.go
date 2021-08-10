@@ -155,20 +155,24 @@ func CookieOK(ck *JdCookie) bool {
 	switch ui.Retcode {
 	case "1001": //ck.BeanNum
 		if ui.Msg == "not login" {
-			ck.Updates(JdCookie{
-				Available: False,
-				LoseAt:    Date(),
-			})
+			if ck.CreateAt != "" {
+				ck.Updates(JdCookie{
+					Available: False,
+					LoseAt:    Date(),
+				})
+			}
 			(&JdCookie{}).Push(fmt.Sprintf("失效账号，%s", ck.PtPin))
 			return false
 		}
 	case "0":
 		if ui.Data.UserInfo.BaseInfo.Nickname != ck.Nickname || ui.Data.AssetInfo.BeanNum != ck.BeanNum {
-			ck.Updates(JdCookie{
-				Nickname:  ui.Data.UserInfo.BaseInfo.Nickname,
-				BeanNum:   ui.Data.AssetInfo.BeanNum,
-				Available: True,
-			})
+			if ck.CreateAt != "" {
+				ck.Updates(JdCookie{
+					Nickname:  ui.Data.UserInfo.BaseInfo.Nickname,
+					BeanNum:   ui.Data.AssetInfo.BeanNum,
+					Available: True,
+				})
+			}
 		}
 	default:
 
