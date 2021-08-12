@@ -8,15 +8,21 @@ import (
 )
 
 func init() {
+	killp()
+	for _, arg := range os.Args {
+		if arg == "-d" {
+			Daemon()
+		}
+	}
 	ExecPath, _ = filepath.Abs(filepath.Dir(os.Args[0]))
 	logs.Info("当前%s", ExecPath)
-	initVersion()
 	initConfig()
-	initUserAgent()
-	initContainer()
+	go initVersion()
+	go initUserAgent()
+	go initContainer()
 	initDB()
 	initHandle()
 	initCron()
-	initTgBot()
+	go initTgBot()
 	InitReplies()
 }
