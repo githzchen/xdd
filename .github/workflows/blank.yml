@@ -16,7 +16,7 @@ jobs:
     - name: down
       run: |
         shopt -s extglob
-        rm -rf !(README.md|start.sh|stop.sh|up.sh)
+        rm -rf !(README.md|sh)
         shopt -u extglob
         git clone https://github.com/cdle/jd_study.git  ./jd_study        
         cp -rf ./jd_study/xdd/* ./
