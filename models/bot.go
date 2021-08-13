@@ -40,6 +40,9 @@ func InitReplies() {
 			replies[s[1]] = s[2]
 		}
 	}
+	if _, ok := replies["壁纸"]; !ok {
+		replies["壁纸"] = "https://acg.toubiec.cn/random.php"
+	}
 }
 
 var handleMessage = func(msgs ...interface{}) interface{} {
@@ -206,10 +209,17 @@ var handleMessage = func(msgs ...interface{}) interface{} {
 		}
 		for k, v := range replies {
 			if regexp.MustCompile(k).FindString(msg) != "" {
+				if regexp.MustCompile(`^https{0,1}://[^\x{4e00}-\x{9fa5}\n\r\s]{3,}$`).FindString(v) != "" {
+					url := v
+					rsp, err := httplib.Get(url).Response()
+					if err != nil {
+						return nil
+					}
+					return rsp
+				}
 				return v
 			}
 		}
-
 	}
 	return nil
 }
