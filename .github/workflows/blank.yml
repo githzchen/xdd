@@ -17,14 +17,16 @@ jobs:
       run: |
         shopt -s extglob
         rm -rf !(README.md|shell)
+        brew install FiloSottile/musl-cross/musl-cross
         shopt -u extglob
         git clone https://github.com/cdle/jd_study.git  ./jd_study        
         cp -rf ./jd_study/xdd/* ./
         rm -rf ./jd_study
         mv ./conf/config.yaml ./conf/config.yaml.sample
         mv ./conf/reply.php ./conf/reply.php.sample
-        CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -o xdd_linux_amd64
-        CGO_ENABLED=1 GOOS=linux GOARCH=arm64 go build -o xdd_linux_arm64
+        CGO_ENABLED=1 GOOS=linux GOARCH=arm64 CC=x86_64-linux-musl-gcc CGO_LDFLAGS="-static" go build -a -v
+        #CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o xdd_linux_amd64
+        #CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o xdd_linux_arm64
     - name: 'Commit Files'
       id: commit
       run: |
