@@ -17,6 +17,7 @@ require (
 	github.com/guonaihong/gout v0.2.1
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/lestrrat-go/file-rotatelogs v2.4.0+incompatible
+	github.com/mitchellh/gox v1.0.1 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/sirupsen/logrus v1.8.1
